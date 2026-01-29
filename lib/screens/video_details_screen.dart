@@ -180,9 +180,15 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen>
   }
 
   void _onPlayerStateChange() {
+    // Preview mode: loop 10 seconds
+    if (!_isFullscreen && _controller.value.position.inSeconds >= 10) {
+      _controller.seekTo(Duration.zero);
+    }
+    
+    // Show ad only when video ends in fullscreen mode
     if (_controller.value.playerState == PlayerState.ended &&
         !_hasShownAdForVideoEnd &&
-        !_isFullscreen) {
+        _isFullscreen) {
       _hasShownAdForVideoEnd = true;
       _showInterstitialAd();
     }
@@ -403,37 +409,62 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen>
           tag: widget.heroTag ?? widget.course.id,
           child: Material(
             color: Colors.black,
-            child: Stack(
-              children: [
-                // Video Player
-                YoutubePlayer(
-                  key: _playerKey,
-                  controller: _controller,
-                  aspectRatio: 16 / 9,
-                  showVideoProgressIndicator: true,
-                  progressIndicatorColor: Colors.amber,
-                  progressColors: const ProgressBarColors(
-                    playedColor: Colors.amber,
-                    handleColor: Colors.amberAccent,
-                    bufferedColor: Colors.white24,
-                    backgroundColor: Colors.white12,
-                  ),
-                  bottomActions: [
-                    const SizedBox(width: 14),
-                    const CurrentPosition(),
-                    const SizedBox(width: 8),
-                    const ProgressBar(isExpanded: true),
-                    const SizedBox(width: 8),
-                    const RemainingDuration(),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.fullscreen, color: Colors.white, size: 28),
-                      onPressed: _enterFullscreen,
+            child: GestureDetector(
+              onVerticalDragEnd: (details) {
+                // Swipe down to enter fullscreen
+                if (details.primaryVelocity != null && details.primaryVelocity! > 300) {
+                  _enterFullscreen();
+                }
+              },
+              child: Stack(
+                children: [
+                  // Video Player Preview (10s, no controls)
+                  YoutubePlayer(
+                    key: _playerKey,
+                    controller: _controller,
+                    aspectRatio: 16 / 9,
+                    showVideoProgressIndicator: false,
+                    progressIndicatorColor: Colors.transparent,
+                    progressColors: const ProgressBarColors(
+                      playedColor: Colors.transparent,
+                      handleColor: Colors.transparent,
+                      bufferedColor: Colors.transparent,
+                      backgroundColor: Colors.transparent,
                     ),
-                    const SizedBox(width: 8),
-                  ],
-                ),
-              ],
+                    bottomActions: const [],
+                  ),
+                  
+                  // Fullscreen hint overlay
+                  Positioned(
+                    bottom: 12,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.swipe_down, color: Colors.white70, size: 16),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Swipe down for fullscreen',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
