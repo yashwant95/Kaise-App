@@ -5,6 +5,7 @@ import '../widgets/custom_search_bar.dart';
 import '../widgets/category_item.dart';
 import '../widgets/video_card.dart';
 import '../models/course.dart';
+import '../models/category.dart';
 
 import 'video_details_screen.dart';
 import 'new_screen.dart';
@@ -25,7 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _selectedCategory;
   String _searchQuery = '';
   List<Course> _courses = [];
-  List<Map<String, dynamic>> _categories = [];
+  List<Category> _categories = [];
   bool _isLoading = true;
 
   @override
@@ -46,6 +47,15 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       print('Error fetching data: $e');
+      // Show error message to user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load data: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -114,7 +124,7 @@ class _HomeDashboard extends StatelessWidget {
   final String? selectedCategory;
   final String searchQuery;
   final List<Course> courses;
-  final List<Map<String, dynamic>> categories;
+  final List<Category> categories;
   final Function(String?)? onCategorySet;
   final Function(String)? onSearchSet;
 
@@ -321,10 +331,10 @@ class _HomeDashboard extends StatelessWidget {
               return SizedBox(
                 width: itemWidth,
                 child: CategoryItem(
-                  icon: getIcon(cat['icon']),
-                  label: cat['label'] as String,
-                  color: getColor(cat['color']),
-                  onTap: () => onCategorySet?.call(cat['label'] as String),
+                  icon: getIcon(cat.icon),
+                  label: cat.label,
+                  color: getColor(cat.color),
+                  onTap: () => onCategorySet?.call(cat.label),
                 ),
               );
             }).toList(),
