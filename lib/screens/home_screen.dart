@@ -11,6 +11,7 @@ import 'video_details_screen.dart';
 import 'new_screen.dart';
 import 'library_screen.dart';
 import 'coach_screen.dart';
+import 'profile_screen.dart';
 
 import '../services/api_service.dart';
 
@@ -254,8 +255,12 @@ class _HomeDashboard extends StatelessWidget {
                 shape: const CircleBorder(),
                 child: InkWell(
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Profile coming soon!')));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ProfileScreen(),
+                      ),
+                    );
                   },
                   borderRadius: BorderRadius.circular(20),
                   child: const CircleAvatar(
