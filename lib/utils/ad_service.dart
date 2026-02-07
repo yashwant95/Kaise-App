@@ -9,8 +9,8 @@ class AdService {
   InterstitialAd? _interstitialAd;
   bool _isAdLoaded = false;
 
-  // Test ID for Android Interstitial
-  final String _adUnitId = 'ca-app-pub-3940256099942544/1033173712';
+  // AdMob Rewarded Ad Unit ID
+  final String _adUnitId = 'ca-app-pub-4207496413059718/2888187366';
 
   void loadInterstitialAd() {
     InterstitialAd.load(

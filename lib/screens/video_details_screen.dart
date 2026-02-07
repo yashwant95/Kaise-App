@@ -35,12 +35,12 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen>
   bool _isLoadingAd = false;
   bool _hasShownAdForVideoEnd = false;
 
-  // AdMob Test IDs
+  // AdMob Ad Unit IDs
   String get _interstitialAdUnitId {
     if (Platform.isAndroid) {
-      return 'ca-app-pub-3940256099942544/1033173712';
+      return 'ca-app-pub-4207496413059718/2888187366';
     } else if (Platform.isIOS) {
-      return 'ca-app-pub-3940256099942544/4411468910';
+      return 'ca-app-pub-4207496413059718/2888187366';
     }
     return '';
   }
@@ -451,36 +451,116 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen>
   }
 
   Widget _buildEpisodesList() {
-    return ListView.separated(
+    return GridView.builder(
       padding: EdgeInsets.zero,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.75,
+      ),
       itemCount: widget.course.episodes.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final ep = widget.course.episodes[index];
         final isPlaying = ep.id == _currentEpisode.id;
 
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            color:
-                isPlaying ? Colors.amber.withOpacity(0.1) : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isPlaying
-                  ? Colors.amber.withOpacity(0.3)
-                  : Colors.transparent,
+        return GestureDetector(
+          onTap: () => _playEpisode(ep),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isPlaying
+                    ? Colors.amber.withOpacity(0.5)
+                    : Colors.transparent,
+                width: 2,
+              ),
             ),
-          ),
-          child: EpisodeTile(
-            episode: {
-              'title': '${index + 1}. ${ep.title}',
-              'date': ep.date,
-              'duration': ep.duration,
-              'isNew': ep.isNew,
-            },
-            imageUrl: ep.thumbnailUrl,
-            isPlaying: isPlaying,
-            onTap: () => _playEpisode(ep),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.network(
+                    ep.thumbnailUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) =>
+                        Container(color: Colors.grey[850]),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.1),
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.8),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Play button overlay if playing
+                  if (isPlaying)
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.amber,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.play_arrow,
+                          color: Colors.black,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  // Title overlay at bottom
+                  Positioned(
+                    bottom: 12,
+                    left: 10,
+                    right: 10,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${index + 1}. ${ep.title}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: Colors.white,
+                            height: 1.2,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (ep.isNew) ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.deepPurple.withOpacity(0.7),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'New',
+                              style: TextStyle(
+                                color: Color(0xFFB388FF),
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       },

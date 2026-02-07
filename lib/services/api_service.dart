@@ -202,4 +202,28 @@ class ApiService {
       rethrow;
     }
   }
+
+  // Search courses by query
+  static Future<List<Course>> searchCourses(String query) async {
+    try {
+      if (query.trim().isEmpty) {
+        return [];
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/courses/search?q=$query'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map((json) => Course.fromJson(json)).toList();
+      } else {
+        throw Exception('Failed to search courses: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error searching courses: $e');
+      rethrow;
+    }
+  }
 }

@@ -121,7 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _HomeDashboard extends StatelessWidget {
+class _HomeDashboard extends StatefulWidget {
   final String? selectedCategory;
   final String searchQuery;
   final List<Course> courses;
@@ -139,14 +139,67 @@ class _HomeDashboard extends StatelessWidget {
   });
 
   @override
+  State<_HomeDashboard> createState() => _HomeDashboardState();
+}
+
+class _HomeDashboardState extends State<_HomeDashboard> {
+  List<Course> _searchResults = [];
+  bool _isSearching = false;
+  bool _isSearchLoading = false;
+
+  @override
+  void didUpdateWidget(_HomeDashboard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.searchQuery != oldWidget.searchQuery) {
+      _performSearch(widget.searchQuery);
+    }
+  }
+
+  Future<void> _performSearch(String query) async {
+    if (query.isEmpty) {
+      setState(() {
+        _isSearching = false;
+        _searchResults = [];
+        _isSearchLoading = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+      _isSearchLoading = true;
+    });
+
+    try {
+      final results = await ApiService.searchCourses(query);
+      setState(() {
+        _searchResults = results;
+        _isSearchLoading = false;
+      });
+    } catch (e) {
+      print('Search error: $e');
+      setState(() {
+        _isSearchLoading = false;
+        _searchResults = [];
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    List<Course> filteredCourses = courses.where((course) {
-      final matchesCategory =
-          selectedCategory == null || course.category == selectedCategory;
-      final matchesSearch =
-          course.title.toLowerCase().contains(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
-    }).toList();
+    // Use search results if searching, otherwise use filtered courses
+    List<Course> displayCourses;
+    if (_isSearching && widget.searchQuery.isNotEmpty) {
+      displayCourses = _searchResults;
+    } else {
+      displayCourses = widget.courses.where((course) {
+        final matchesCategory = widget.selectedCategory == null ||
+            course.category == widget.selectedCategory;
+        final matchesSearch = widget.searchQuery.isEmpty ||
+            course.title.toLowerCase().contains(widget.searchQuery.toLowerCase());
+        return matchesCategory && matchesSearch;
+      }).toList();
+    }
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -158,47 +211,152 @@ class _HomeDashboard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
             child: CustomSearchBar(
               hint: 'Search courses...',
-              onChanged: onSearchSet,
+              onChanged: (value) {
+                widget.onSearchSet?.call(value);
+              },
             ),
           ),
           const SizedBox(height: 20),
-          _buildCategories(context),
-          const SizedBox(height: 30),
-          if (selectedCategory != null)
+          if (widget.searchQuery.isEmpty)
+            _buildCategories(context),
+          if (widget.searchQuery.isEmpty)
+            const SizedBox(height: 30),
+          if (widget.selectedCategory != null && widget.searchQuery.isEmpty)
             Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
               child: Row(
                 children: [
-                  Text('Showing: $selectedCategory',
+                  Text('Showing: ${widget.selectedCategory}',
                       style: const TextStyle(
                           color: Colors.amber, fontWeight: FontWeight.bold)),
                   IconButton(
                     icon: const Icon(Icons.close, size: 16, color: Colors.grey),
-                    onPressed: () => onCategorySet?.call(null),
+                    onPressed: () => widget.onCategorySet?.call(null),
                   )
                 ],
               ),
             ),
-          _buildSectionHeader(
-            icon: Icons.bar_chart,
-            title: filteredCourses.isEmpty ? 'No Results' : 'Top Videos',
-            iconColor: Colors.blueAccent,
-          ),
+          if (widget.searchQuery.isNotEmpty)
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+              child: Text(
+                'Search Results for "${widget.searchQuery}"',
+                style: const TextStyle(
+                    color: Colors.amber, fontWeight: FontWeight.bold),
+              ),
+            ),
+          if (_isSearchLoading)
+            const Padding(
+              padding: EdgeInsets.all(32.0),
+              child: Center(
+                child: CircularProgressIndicator(color: Colors.amber),
+              ),
+            )
+          else
+            _buildSectionHeader(
+              icon: Icons.bar_chart,
+              title: displayCourses.isEmpty ? 'No Results' : 'Top Videos',
+              iconColor: Colors.blueAccent,
+            ),
           const SizedBox(height: 16),
-          _buildTopVideosGrid(context, filteredCourses),
-          const SizedBox(height: 30),
-          _buildSectionHeader(
-            title: 'English Speaking',
-            titleColor: Colors.orange,
-            showViewAll: true,
-            leadingText: 'I Am',
-            onViewAll: () {
-              onCategorySet?.call('English Speaking');
-            },
+          _buildTopVideosGrid(context, displayCourses),
+          if (widget.searchQuery.isEmpty) ...[
+            const SizedBox(height: 30),
+            _buildSectionHeader(
+              title: 'English Speaking',
+              titleColor: Colors.orange,
+              showViewAll: true,
+              leadingText: 'I Am',
+              onViewAll: () {
+                widget.onCategorySet?.call('English Speaking');
+              },
+            ),
+            const SizedBox(height: 16),
+            _buildHorizontalVideoList(context),
+          ],
+          const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(context),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+            child: CustomSearchBar(
+              hint: 'Search courses...',
+              onChanged: (value) {
+                widget.onSearchSet?.call(value);
+              },
+            ),
           ),
+          const SizedBox(height: 20),
+          if (widget.searchQuery.isEmpty)
+            _buildCategories(context),
+          if (widget.searchQuery.isEmpty)
+            const SizedBox(height: 30),
+          if (widget.selectedCategory != null && widget.searchQuery.isEmpty)
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+              child: Row(
+                children: [
+                  Text('Showing: ${widget.selectedCategory}',
+                      style: const TextStyle(
+                          color: Colors.amber, fontWeight: FontWeight.bold)),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 16, color: Colors.grey),
+                    onPressed: () => widget.onCategorySet?.call(null),
+                  )
+                ],
+              ),
+            ),
+          if (widget.searchQuery.isNotEmpty)
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+              child: Text(
+                'Search Results for "${widget.searchQuery}"',
+                style: const TextStyle(
+                    color: Colors.amber, fontWeight: FontWeight.bold),
+              ),
+            ),
+          if (_isSearchLoading)
+            const Padding(
+              padding: EdgeInsets.all(32.0),
+              child: Center(
+                child: CircularProgressIndicator(color: Colors.amber),
+              ),
+            )
+          else
+            _buildSectionHeader(
+              icon: Icons.bar_chart,
+              title: displayCourses.isEmpty ? 'No Results' : 'Top Videos',
+              iconColor: Colors.blueAccent,
+            ),
           const SizedBox(height: 16),
-          _buildHorizontalVideoList(context),
+          _buildTopVideosGrid(context, displayCourses),
+          if (widget.searchQuery.isEmpty) ...[
+            const SizedBox(height: 30),
+            _buildSectionHeader(
+              title: 'English Speaking',
+              titleColor: Colors.orange,
+              showViewAll: true,
+              leadingText: 'I Am',
+              onViewAll: () {
+                widget.onCategorySet?.call('English Speaking');
+              },
+            ),
+            const SizedBox(height: 16),
+            _buildHorizontalVideoList(context),
+          ],
           const SizedBox(height: 40),
         ],
       ),
@@ -332,14 +490,14 @@ class _HomeDashboard extends StatelessWidget {
           return Wrap(
             spacing: 16,
             runSpacing: 24,
-            children: categories.map((cat) {
+            children: widget.categories.map((cat) {
               return SizedBox(
                 width: itemWidth,
                 child: CategoryItem(
                   icon: getIcon(cat.icon),
                   label: cat.label,
                   color: getColor(cat.color),
-                  onTap: () => onCategorySet?.call(cat.label),
+                  onTap: () => widget.onCategorySet?.call(cat.label),
                 ),
               );
             }).toList(),
@@ -464,7 +622,7 @@ class _HomeDashboard extends StatelessWidget {
 
   Widget _buildHorizontalVideoList(BuildContext context) {
     final englishCourses =
-        courses.where((c) => c.category == 'English Speaking').toList();
+        widget.courses.where((c) => c.category == 'English Speaking').toList();
 
     return SizedBox(
       height: 180,
