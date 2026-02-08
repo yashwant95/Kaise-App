@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   cupertino_icons: ^1.0.2
   google_fonts: ^6.1.0
   youtube_player_flutter: ^9.0.1
@@ -16,6 +18,7 @@ dependencies:
   google_mobile_ads: ^7.0.0
   http: ^1.6.0
   flutter_dotenv: ^6.0.0
+  shared_preferences: ^2.2.3
 
 dev_dependencies:
   flutter_test:

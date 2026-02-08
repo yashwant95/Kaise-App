@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../widgets/plus_badge.dart';
 import '../widgets/custom_search_bar.dart';
 import '../widgets/category_item.dart';
@@ -14,6 +15,8 @@ import 'coach_screen.dart';
 import 'profile_screen.dart';
 
 import '../services/api_service.dart';
+import '../l10n/app_localizations.dart';
+import '../providers/language_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -143,6 +146,7 @@ class _HomeDashboard extends StatefulWidget {
 }
 
 class _HomeDashboardState extends State<_HomeDashboard> {
+  static const String _englishSpeakingCategory = 'English Speaking';
   List<Course> _searchResults = [];
   bool _isSearching = false;
   bool _isSearchLoading = false;
@@ -187,6 +191,7 @@ class _HomeDashboardState extends State<_HomeDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
     // Use search results if searching, otherwise use filtered courses
     List<Course> displayCourses;
     if (_isSearching && widget.searchQuery.isNotEmpty) {
@@ -196,7 +201,9 @@ class _HomeDashboardState extends State<_HomeDashboard> {
         final matchesCategory = widget.selectedCategory == null ||
             course.category == widget.selectedCategory;
         final matchesSearch = widget.searchQuery.isEmpty ||
-            course.title.toLowerCase().contains(widget.searchQuery.toLowerCase());
+            course.title
+                .toLowerCase()
+                .contains(widget.searchQuery.toLowerCase());
         return matchesCategory && matchesSearch;
       }).toList();
     }
@@ -210,7 +217,7 @@ class _HomeDashboardState extends State<_HomeDashboard> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
             child: CustomSearchBar(
-              hint: 'Search courses...',
+              hint: localizations.searchHint,
               onChanged: (value) {
                 widget.onSearchSet?.call(value);
               },
@@ -222,7 +229,7 @@ class _HomeDashboardState extends State<_HomeDashboard> {
               padding:
                   const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
               child: Text(
-                'Search Results for "${widget.searchQuery}"',
+                localizations.searchResultsFor(widget.searchQuery),
                 style: const TextStyle(
                     color: Colors.amber, fontWeight: FontWeight.bold),
               ),
@@ -237,7 +244,9 @@ class _HomeDashboardState extends State<_HomeDashboard> {
           else
             _buildSectionHeader(
               icon: Icons.bar_chart,
-              title: displayCourses.isEmpty ? 'No Results' : 'Top Videos',
+              title: displayCourses.isEmpty
+                  ? localizations.noResults
+                  : localizations.topVideos,
               iconColor: Colors.blueAccent,
             ),
           const SizedBox(height: 16),
@@ -245,12 +254,13 @@ class _HomeDashboardState extends State<_HomeDashboard> {
           if (widget.searchQuery.isEmpty) ...[
             const SizedBox(height: 30),
             _buildSectionHeader(
-              title: 'English Speaking',
+              title: localizations.englishSpeakingTitle,
               titleColor: Colors.orange,
               showViewAll: true,
               leadingText: 'I Am',
+              viewAllLabel: localizations.viewAll,
               onViewAll: () {
-                widget.onCategorySet?.call('English Speaking');
+                widget.onCategorySet?.call(_englishSpeakingCategory);
               },
             ),
             const SizedBox(height: 16),
@@ -262,7 +272,81 @@ class _HomeDashboardState extends State<_HomeDashboard> {
     );
   }
 
+  void _showLanguagePicker(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    final languageProvider = context.read<LanguageProvider>();
+    final selectedCode = languageProvider.locale.languageCode;
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  localizations.languageSelectTitle,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildLanguageTile(
+                  context: context,
+                  label: localizations.languageEnglish,
+                  locale: const Locale('en'),
+                  isSelected: selectedCode == 'en',
+                ),
+                _buildLanguageTile(
+                  context: context,
+                  label: localizations.languageHindi,
+                  locale: const Locale('hi'),
+                  isSelected: selectedCode == 'hi',
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLanguageTile({
+    required BuildContext context,
+    required String label,
+    required Locale locale,
+    required bool isSelected,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text(
+        label,
+        style: const TextStyle(color: Colors.white),
+      ),
+      trailing: Icon(
+        isSelected ? Icons.check_circle : Icons.circle_outlined,
+        color: isSelected ? Colors.amber : Colors.white54,
+      ),
+      onTap: () async {
+        await context.read<LanguageProvider>().setLocale(locale);
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      },
+    );
+  }
+
   Widget _buildHeader(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
       child: Row(
@@ -274,10 +358,7 @@ class _HomeDashboardState extends State<_HomeDashboard> {
               Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text('Language selection coming soon!')));
-                  },
+                  onTap: () => _showLanguagePicker(context),
                   borderRadius: BorderRadius.circular(24),
                   child: Container(
                     padding:
@@ -292,14 +373,15 @@ class _HomeDashboardState extends State<_HomeDashboard> {
                       border: Border.all(color: Colors.white.withOpacity(0.1)),
                       borderRadius: BorderRadius.circular(24),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
                         Text(
-                          'Hindi',
-                          style: TextStyle(color: Colors.white, fontSize: 13),
+                          localizations.languageChipLabel,
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 13),
                         ),
-                        SizedBox(width: 4),
-                        Icon(Icons.keyboard_arrow_down,
+                        const SizedBox(width: 4),
+                        const Icon(Icons.keyboard_arrow_down,
                             size: 18, color: Colors.white70),
                       ],
                     ),
@@ -413,6 +495,7 @@ class _HomeDashboardState extends State<_HomeDashboard> {
     Color? titleColor,
     bool showViewAll = false,
     String? leadingText,
+    String? viewAllLabel,
     VoidCallback? onViewAll,
   }) {
     return Padding(
@@ -466,13 +549,14 @@ class _HomeDashboardState extends State<_HomeDashboard> {
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: Colors.white.withOpacity(0.05)),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
-                      Text('View all',
-                          style: TextStyle(
+                      Text(viewAllLabel ?? 'View all',
+                          style: const TextStyle(
                               fontSize: 12, fontWeight: FontWeight.w600)),
-                      SizedBox(width: 4),
-                      Icon(Icons.chevron_right, size: 16, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.chevron_right,
+                          size: 16, color: Colors.grey),
                     ],
                   ),
                 ),
@@ -520,8 +604,9 @@ class _HomeDashboardState extends State<_HomeDashboard> {
   }
 
   Widget _buildHorizontalVideoList(BuildContext context) {
-    final englishCourses =
-        widget.courses.where((c) => c.category == 'English Speaking').toList();
+    final englishCourses = widget.courses
+        .where((c) => c.category == _englishSpeakingCategory)
+        .toList();
 
     return SizedBox(
       height: 180,
