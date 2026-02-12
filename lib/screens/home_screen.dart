@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../widgets/plus_badge.dart';
 import '../widgets/custom_search_bar.dart';
 import '../widgets/category_item.dart';
 import '../widgets/video_card.dart';
@@ -79,6 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     searchQuery: _searchQuery,
                     courses: _courses,
                     categories: _categories,
+                    onRefresh: _fetchData,
                     onCategorySet: (cat) =>
                         setState(() => _selectedCategory = cat),
                     onSearchSet: (query) =>
@@ -131,10 +131,12 @@ class _HomeDashboard extends StatefulWidget {
   final List<Category> categories;
   final Function(String?)? onCategorySet;
   final Function(String)? onSearchSet;
+  final Future<void> Function() onRefresh;
 
   const _HomeDashboard({
     required this.courses,
     required this.categories,
+    required this.onRefresh,
     this.selectedCategory,
     this.searchQuery = '',
     this.onCategorySet,
@@ -208,68 +210,74 @@ class _HomeDashboardState extends State<_HomeDashboard> {
       }).toList();
     }
 
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(context),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-            child: CustomSearchBar(
-              hint: localizations.searchHint,
-              onChanged: (value) {
-                widget.onSearchSet?.call(value);
-              },
-            ),
+    return RefreshIndicator(
+        onRefresh: widget.onRefresh,
+        color: Colors.amber,
+        backgroundColor: const Color(0xFF1E1E1E),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics()),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(context),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+                child: CustomSearchBar(
+                  hint: localizations.searchHint,
+                  onChanged: (value) {
+                    widget.onSearchSet?.call(value);
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+              if (widget.searchQuery.isNotEmpty)
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+                  child: Text(
+                    localizations.searchResultsFor(widget.searchQuery),
+                    style: const TextStyle(
+                        color: Colors.amber, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              if (_isSearchLoading)
+                const Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: Center(
+                    child: CircularProgressIndicator(color: Colors.amber),
+                  ),
+                )
+              else
+                _buildSectionHeader(
+                  icon: Icons.bar_chart,
+                  title: displayCourses.isEmpty
+                      ? localizations.noResults
+                      : localizations.topVideos,
+                  iconColor: Colors.blueAccent,
+                ),
+              const SizedBox(height: 16),
+              _buildTopVideosGrid(context, displayCourses),
+              if (widget.searchQuery.isEmpty) ...[
+                const SizedBox(height: 30),
+                _buildSectionHeader(
+                  title: localizations.englishSpeakingTitle,
+                  titleColor: Colors.orange,
+                  showViewAll: true,
+                  leadingText: 'I Am',
+                  viewAllLabel: localizations.viewAll,
+                  onViewAll: () {
+                    widget.onCategorySet?.call(_englishSpeakingCategory);
+                  },
+                ),
+                const SizedBox(height: 16),
+                _buildHorizontalVideoList(context),
+              ],
+              const SizedBox(height: 40),
+            ],
           ),
-          const SizedBox(height: 20),
-          if (widget.searchQuery.isNotEmpty)
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-              child: Text(
-                localizations.searchResultsFor(widget.searchQuery),
-                style: const TextStyle(
-                    color: Colors.amber, fontWeight: FontWeight.bold),
-              ),
-            ),
-          if (_isSearchLoading)
-            const Padding(
-              padding: EdgeInsets.all(32.0),
-              child: Center(
-                child: CircularProgressIndicator(color: Colors.amber),
-              ),
-            )
-          else
-            _buildSectionHeader(
-              icon: Icons.bar_chart,
-              title: displayCourses.isEmpty
-                  ? localizations.noResults
-                  : localizations.topVideos,
-              iconColor: Colors.blueAccent,
-            ),
-          const SizedBox(height: 16),
-          _buildTopVideosGrid(context, displayCourses),
-          if (widget.searchQuery.isEmpty) ...[
-            const SizedBox(height: 30),
-            _buildSectionHeader(
-              title: localizations.englishSpeakingTitle,
-              titleColor: Colors.orange,
-              showViewAll: true,
-              leadingText: 'I Am',
-              viewAllLabel: localizations.viewAll,
-              onViewAll: () {
-                widget.onCategorySet?.call(_englishSpeakingCategory);
-              },
-            ),
-            const SizedBox(height: 16),
-            _buildHorizontalVideoList(context),
-          ],
-          const SizedBox(height: 40),
-        ],
-      ),
-    );
+        ));
   }
 
   void _showLanguagePicker(BuildContext context) {
@@ -352,7 +360,17 @@ class _HomeDashboardState extends State<_HomeDashboard> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const PlusBadge(),
+          Padding(
+            padding: const EdgeInsets.only(left: 26.0),
+            child: Image.asset(
+              'assets/images/app_logo.png',
+              height: 32,
+              errorBuilder: (context, error, stackTrace) => const SizedBox(
+                height: 32,
+                child: Icon(Icons.school, color: Colors.amber, size: 32),
+              ),
+            ),
+          ),
           Row(
             children: [
               Material(

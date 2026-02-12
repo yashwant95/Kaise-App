@@ -112,15 +112,21 @@ class _NewScreenState extends State<NewScreen> {
           ),
           const SizedBox(height: 20),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              physics: const BouncingScrollPhysics(),
-              children: [
-                _buildNewArrivalSection(
-                    context, 'Trending this Week', _courses),
-                _buildNewArrivalSection(
-                    context, 'Newly Added Series', _courses.reversed.toList()),
-              ],
+            child: RefreshIndicator(
+              onRefresh: _fetchCourses,
+              color: Colors.amber,
+              backgroundColor: const Color(0xFF1E1E1E),
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics()),
+                children: [
+                  _buildNewArrivalSection(
+                      context, 'Trending this Week', _courses),
+                  _buildNewArrivalSection(context, 'Newly Added Series',
+                      _courses.reversed.toList()),
+                ],
+              ),
             ),
           ),
         ],

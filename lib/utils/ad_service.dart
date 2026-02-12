@@ -10,7 +10,7 @@ class AdService {
   bool _isAdLoaded = false;
 
   // AdMob Rewarded Ad Unit ID
-  final String _adUnitId = 'ca-app-pub-4207496413059718/2888187366';
+  final String _adUnitId = 'ca-app-pub-4207496413059718/7285068698';
 
   void loadInterstitialAd() {
     InterstitialAd.load(

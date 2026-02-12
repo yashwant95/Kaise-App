@@ -33,22 +33,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            _buildProfileHeader(),
-            const SizedBox(height: 32),
-            _buildAccountSection(),
-            const SizedBox(height: 24),
-            _buildSettingsSection(),
-            const SizedBox(height: 24),
-            _buildPreferencesSection(),
-            const SizedBox(height: 24),
-            _buildSupportSection(),
-            const SizedBox(height: 24),
-            _buildSignOutButton(),
-          ],
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await Future.delayed(const Duration(seconds: 1));
+          if (mounted) setState(() {});
+        },
+        color: Colors.amber,
+        backgroundColor: const Color(0xFF1E1E1E),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics()),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              _buildProfileHeader(),
+              const SizedBox(height: 32),
+              _buildAccountSection(),
+              const SizedBox(height: 24),
+              _buildSettingsSection(),
+              const SizedBox(height: 24),
+              _buildPreferencesSection(),
+            ],
+          ),
         ),
       ),
     );
@@ -226,68 +232,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildSupportSection() {
-    return _buildSection(
-      'Support',
-      [
-        _buildListItem(
-          icon: Icons.help_outline,
-          title: 'Help Center',
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Help Center coming soon!')),
-            );
-          },
-        ),
-        _buildListItem(
-          icon: Icons.feedback_outlined,
-          title: 'Send Feedback',
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Feedback feature coming soon!')),
-            );
-          },
-        ),
-        _buildListItem(
-          icon: Icons.info_outline,
-          title: 'About',
-          onTap: () {
-            _showAboutDialog();
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSignOutButton() {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(vertical: 16),
-      child: ElevatedButton(
-        onPressed: () {
-          _showSignOutDialog();
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.red.withOpacity(0.1),
-          foregroundColor: Colors.red,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.red.withOpacity(0.3)),
-          ),
-          elevation: 0,
-        ),
-        child: Text(
-          'Sign Out',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildSection(String title, List<Widget> children) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -456,58 +400,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 )),
           ],
         ),
-      ),
-    );
-  }
-
-  void _showAboutDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title:
-            const Text('About KaiseApp', style: TextStyle(color: Colors.white)),
-        content: const Text(
-          'KaiseApp v1.0.0\n\nYour ultimate learning companion for video courses and tutorials.',
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK', style: TextStyle(color: Colors.amber)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSignOutDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text('Sign Out', style: TextStyle(color: Colors.white)),
-        content: const Text(
-          'Are you sure you want to sign out?',
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child:
-                const Text('Cancel', style: TextStyle(color: Colors.white70)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('Sign out functionality coming soon!')),
-              );
-            },
-            child: const Text('Sign Out', style: TextStyle(color: Colors.red)),
-          ),
-        ],
       ),
     );
   }

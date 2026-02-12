@@ -38,9 +38,9 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen>
   // AdMob Ad Unit IDs
   String get _interstitialAdUnitId {
     if (Platform.isAndroid) {
-      return 'ca-app-pub-4207496413059718/2888187366';
+      return 'ca-app-pub-4207496413059718/7285068698';
     } else if (Platform.isIOS) {
-      return 'ca-app-pub-4207496413059718/2888187366';
+      return 'ca-app-pub-4207496413059718/7285068698';
     }
     return '';
   }
@@ -412,7 +412,15 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen>
               _buildEpisodeHeader(),
               const SizedBox(height: 16),
               Expanded(
-                child: _buildEpisodesList(),
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    await Future.delayed(const Duration(seconds: 1));
+                    if (mounted) setState(() {});
+                  },
+                  color: Colors.amber,
+                  backgroundColor: const Color(0xFF1E1E1E),
+                  child: _buildEpisodesList(),
+                ),
               ),
             ],
           ),
@@ -453,6 +461,8 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen>
   Widget _buildEpisodesList() {
     return GridView.builder(
       padding: EdgeInsets.zero,
+      physics:
+          const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 16,

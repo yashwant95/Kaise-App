@@ -134,54 +134,64 @@ class _CoachScreenState extends State<CoachScreen> {
   }
 
   Widget _buildChatArea() {
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(16),
-      itemCount: _messages.length,
-      itemBuilder: (context, index) {
-        final msg = _messages[index];
-        final isUser = msg['sender'] == 'user';
-        return Align(
-          alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 20),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.75),
-            decoration: BoxDecoration(
-              color: isUser ? Colors.white : const Color(0xFF1E1E1E),
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(16),
-                topRight: const Radius.circular(16),
-                bottomLeft: Radius.circular(isUser ? 16 : 0),
-                bottomRight: Radius.circular(isUser ? 0 : 16),
+    return RefreshIndicator(
+        onRefresh: () async {
+          await Future.delayed(const Duration(seconds: 1));
+          if (mounted) setState(() {});
+        },
+        color: Colors.amber,
+        backgroundColor: const Color(0xFF1E1E1E),
+        child: ListView.builder(
+          controller: _scrollController,
+          padding: const EdgeInsets.all(16),
+          physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics()),
+          itemCount: _messages.length,
+          itemBuilder: (context, index) {
+            final msg = _messages[index];
+            final isUser = msg['sender'] == 'user';
+            return Align(
+              alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 20),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.75),
+                decoration: BoxDecoration(
+                  color: isUser ? Colors.white : const Color(0xFF1E1E1E),
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(16),
+                    topRight: const Radius.circular(16),
+                    bottomLeft: Radius.circular(isUser ? 16 : 0),
+                    bottomRight: Radius.circular(isUser ? 0 : 16),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      msg['text']!,
+                      style: TextStyle(
+                        color: isUser ? Colors.black : Colors.white,
+                        fontSize: 15,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      msg['time']!,
+                      style: TextStyle(
+                        color: isUser ? Colors.black54 : Colors.white38,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  msg['text']!,
-                  style: TextStyle(
-                    color: isUser ? Colors.black : Colors.white,
-                    fontSize: 15,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  msg['time']!,
-                  style: TextStyle(
-                    color: isUser ? Colors.black54 : Colors.white38,
-                    fontSize: 10,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+            );
+          },
+        ));
   }
 
   Widget _buildInputArea() {
