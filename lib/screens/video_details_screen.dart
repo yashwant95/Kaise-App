@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,6 +7,7 @@ import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../models/course.dart';
 import '../widgets/episode_tile.dart';
+import '../services/api_service.dart';
 
 class VideoDetailsScreen extends StatefulWidget {
   final Course course;
@@ -35,6 +37,12 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen>
   bool _isLoadingAd = false;
   bool _hasShownAdForVideoEnd = false;
 
+  // Double-tap seek feedback
+  bool _showSeekForward = false;
+  bool _showSeekBackward = false;
+  Timer? _seekForwardTimer;
+  Timer? _seekBackwardTimer;
+
   // AdMob Ad Unit IDs
   String get _interstitialAdUnitId {
     if (Platform.isAndroid) {
@@ -62,9 +70,26 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen>
 
     _currentEpisode = widget.course.episodes.first;
     _loadInterstitialAd();
+    // Increment view count when course is opened
+    ApiService.incrementViewCount(widget.course.id);
   }
 
-  void _initializeController(String videoId) {
+  /// Extracts a YouTube video ID from a full URL or returns the ID as-is.
+  String _extractYoutubeId(String url) {
+    if (RegExp(r'^[a-zA-Z0-9_-]{11}$').hasMatch(url)) return url;
+    final patterns = [
+      RegExp(
+          r'(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})'),
+    ];
+    for (final pattern in patterns) {
+      final match = pattern.firstMatch(url);
+      if (match != null && match.group(1) != null) return match.group(1)!;
+    }
+    return url;
+  }
+
+  void _initializeController(String videoUrl) {
+    final videoId = _extractYoutubeId(videoUrl);
     _controller = YoutubePlayerController(
       initialVideoId: videoId,
       flags: const YoutubePlayerFlags(
@@ -118,11 +143,6 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen>
           _interstitialAd = null;
           _isAdLoaded = false;
           _loadInterstitialAd();
-
-          // Rebuild player after ad closes to fix WebView issues
-          if (mounted) {
-            _rebuildPlayer();
-          }
           onAdClosed?.call();
         },
         onAdFailedToShowFullScreenContent: (ad, error) {
@@ -139,71 +159,85 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen>
     }
   }
 
-  void _rebuildPlayer() {
-    if (!mounted || _controller == null) return;
-
-    final currentVideoId = _currentEpisode.videoUrl;
-    final currentPosition = _controller!.value.position;
-
-    // Clean up old controller
-    _controller!.removeListener(_onPlayerStateChange);
-    _controller!.pause();
-
-    // Dispose old controller
-    _controller!.dispose();
-
-    // Create new controller
-    _controller = YoutubePlayerController(
-      initialVideoId: currentVideoId,
-      flags: const YoutubePlayerFlags(
-        autoPlay: true,
-        mute: false,
-        enableCaption: false,
-        forceHD: false,
-        hideControls: false,
-      ),
-    );
-    _controller!.addListener(_onPlayerStateChange);
-
-    // Update key to force rebuild
-    setState(() {
-      _playerKey = UniqueKey();
-    });
-
-    // Seek to previous position after a short delay
-    Future.delayed(const Duration(milliseconds: 800), () {
-      if (mounted && currentPosition.inSeconds > 2) {
-        _controller!.seekTo(currentPosition);
-      }
-    });
-  }
-
   void _onPlayerStateChange() {
     if (_controller == null) return;
 
-    // Show ad only when video ends in fullscreen mode
+    // When video ends: show ad, then auto-play next episode
     if (_controller!.value.playerState == PlayerState.ended &&
-        !_hasShownAdForVideoEnd &&
-        _isFullscreen) {
+        !_hasShownAdForVideoEnd) {
       _hasShownAdForVideoEnd = true;
-      _showInterstitialAd();
+
+      // Show ad first, then play next episode after ad closes
+      _showInterstitialAd(onAdClosed: () {
+        if (mounted) {
+          _autoPlayNextEpisode();
+        }
+      });
     }
+
     if (_controller!.value.playerState == PlayerState.playing) {
       _hasShownAdForVideoEnd = false;
     }
   }
 
+  /// Automatically plays the next episode after ad finishes.
+  /// If no next episode, exits fullscreen.
+  void _autoPlayNextEpisode() {
+    final currentIndex =
+        widget.course.episodes.indexWhere((ep) => ep.id == _currentEpisode.id);
+
+    if (currentIndex != -1 &&
+        currentIndex < widget.course.episodes.length - 1) {
+      final nextEpisode = widget.course.episodes[currentIndex + 1];
+      _switchToEpisode(nextEpisode);
+    } else {
+      // No more episodes, exit fullscreen
+      _exitFullscreen();
+    }
+  }
+
+  /// Seek forward by 10 seconds
+  void _seekForward() {
+    if (_controller == null) return;
+    final currentPos = _controller!.value.position;
+    final newPos = currentPos + const Duration(seconds: 10);
+    _controller!.seekTo(newPos);
+
+    // Show visual feedback
+    _seekForwardTimer?.cancel();
+    setState(() => _showSeekForward = true);
+    _seekForwardTimer = Timer(const Duration(milliseconds: 600), () {
+      if (mounted) setState(() => _showSeekForward = false);
+    });
+  }
+
+  /// Seek backward by 10 seconds
+  void _seekBackward() {
+    if (_controller == null) return;
+    final currentPos = _controller!.value.position;
+    final newPos = currentPos - const Duration(seconds: 10);
+    _controller!.seekTo(newPos.isNegative ? Duration.zero : newPos);
+
+    // Show visual feedback
+    _seekBackwardTimer?.cancel();
+    setState(() => _showSeekBackward = true);
+    _seekBackwardTimer = Timer(const Duration(milliseconds: 600), () {
+      if (mounted) setState(() => _showSeekBackward = false);
+    });
+  }
+
   void _playEpisode(Episode episode) {
+    // Dispose existing controller
+    if (_controller != null) {
+      _controller!.removeListener(_onPlayerStateChange);
+      _controller!.dispose();
+      _controller = null;
+    }
+
     setState(() {
       _currentEpisode = episode;
       _hasShownAdForVideoEnd = false;
     });
-
-    // Initialize controller for the episode
-    if (_controller != null) {
-      _controller!.removeListener(_onPlayerStateChange);
-      _controller!.dispose();
-    }
 
     _initializeController(episode.videoUrl);
 
@@ -238,6 +272,7 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen>
     if (_controller != null) {
       _controller!.removeListener(_onPlayerStateChange);
       _controller!.dispose();
+      _controller = null;
     }
 
     setState(() {
@@ -266,14 +301,19 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen>
       _isFullscreen = false;
     });
 
-    // Show ad when exiting fullscreen (only if not already shown for video end)
-    if (!_hasShownAdForVideoEnd) {
-      _showInterstitialAd();
+    // Clean up controller when exiting fullscreen
+    if (_controller != null) {
+      _controller!.removeListener(_onPlayerStateChange);
+      _controller!.pause();
+      _controller!.dispose();
+      _controller = null;
     }
   }
 
   @override
   void dispose() {
+    _seekForwardTimer?.cancel();
+    _seekBackwardTimer?.cancel();
     if (_controller != null) {
       _controller!.removeListener(_onPlayerStateChange);
       _controller!.dispose();
@@ -315,72 +355,183 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen>
       },
       child: Scaffold(
         backgroundColor: Colors.black,
-        body: GestureDetector(
-          onVerticalDragEnd: (DragEndDetails details) {
-            // Swipe up for next episode
-            if (details.primaryVelocity != null &&
-                details.primaryVelocity! < -500) {
-              _playNextEpisode();
-            }
-            // Swipe down for previous episode
-            else if (details.primaryVelocity != null &&
-                details.primaryVelocity! > 500) {
-              _playPreviousEpisode();
-            }
-          },
-          child: Stack(
-            children: [
-              // Video Player - Full screen centered
-              Center(
-                child: SizedBox(
-                  width: MediaQuery.of(context).size.width,
-                  height: MediaQuery.of(context).size.height,
-                  child: YoutubePlayer(
-                    key: _playerKey,
-                    controller: _controller!,
-                    showVideoProgressIndicator: true,
-                    progressIndicatorColor: Colors.amber,
-                    progressColors: const ProgressBarColors(
-                      playedColor: Colors.amber,
-                      handleColor: Colors.amberAccent,
-                      bufferedColor: Colors.white24,
-                      backgroundColor: Colors.white12,
+        body: Stack(
+          children: [
+            // Video Player - Full screen centered
+            Center(
+              child: SizedBox(
+                width: MediaQuery.of(context).size.width,
+                height: MediaQuery.of(context).size.height,
+                child: YoutubePlayer(
+                  key: _playerKey,
+                  controller: _controller!,
+                  showVideoProgressIndicator: true,
+                  progressIndicatorColor: Colors.amber,
+                  progressColors: const ProgressBarColors(
+                    playedColor: Colors.amber,
+                    handleColor: Colors.amberAccent,
+                    bufferedColor: Colors.white24,
+                    backgroundColor: Colors.white12,
+                  ),
+                  bottomActions: [
+                    const SizedBox(width: 14),
+                    const CurrentPosition(),
+                    const SizedBox(width: 8),
+                    const ProgressBar(isExpanded: true),
+                    const SizedBox(width: 8),
+                    const RemainingDuration(),
+                    const SizedBox(width: 14),
+                  ],
+                ),
+              ),
+            ),
+
+            // Double-tap seek zones (left = backward, right = forward)
+            Positioned.fill(
+              child: Row(
+                children: [
+                  // Left half - double tap to seek backward 10s
+                  Expanded(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onDoubleTap: _seekBackward,
+                      onVerticalDragEnd: (details) {
+                        if (details.primaryVelocity != null &&
+                            details.primaryVelocity! > 500) {
+                          _playPreviousEpisode();
+                        } else if (details.primaryVelocity != null &&
+                            details.primaryVelocity! < -500) {
+                          _playNextEpisode();
+                        }
+                      },
+                      child: Container(color: Colors.transparent),
                     ),
-                    bottomActions: [
-                      const SizedBox(width: 14),
-                      const CurrentPosition(),
-                      const SizedBox(width: 8),
-                      const ProgressBar(isExpanded: true),
-                      const SizedBox(width: 8),
-                      const RemainingDuration(),
-                      const SizedBox(width: 14),
-                    ],
+                  ),
+                  // Right half - double tap to seek forward 10s
+                  Expanded(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onDoubleTap: _seekForward,
+                      onVerticalDragEnd: (details) {
+                        if (details.primaryVelocity != null &&
+                            details.primaryVelocity! > 500) {
+                          _playPreviousEpisode();
+                        } else if (details.primaryVelocity != null &&
+                            details.primaryVelocity! < -500) {
+                          _playNextEpisode();
+                        }
+                      },
+                      child: Container(color: Colors.transparent),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Seek backward visual feedback
+            if (_showSeekBackward)
+              Positioned(
+                left: 40,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: AnimatedOpacity(
+                    opacity: _showSeekBackward ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(50),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.replay_10, color: Colors.white, size: 40),
+                          SizedBox(height: 4),
+                          Text('10s',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
 
-              // Close button
+            // Seek forward visual feedback
+            if (_showSeekForward)
               Positioned(
-                top: MediaQuery.of(context).padding.top + 12,
-                right: 12,
-                child: GestureDetector(
-                  onTap: _exitFullscreen,
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.close,
-                      color: Colors.white,
-                      size: 24,
+                right: 40,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: AnimatedOpacity(
+                    opacity: _showSeekForward ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(50),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.forward_10, color: Colors.white, size: 40),
+                          SizedBox(height: 4),
+                          Text('10s',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ],
-          ),
+
+            // Close button
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 12,
+              right: 12,
+              child: GestureDetector(
+                onTap: _exitFullscreen,
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+
+            // Episode title overlay at top
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 12,
+              left: 16,
+              right: 60,
+              child: Text(
+                _currentEpisode.title,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -515,7 +666,7 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen>
                     Center(
                       child: Container(
                         padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: Colors.amber,
                           shape: BoxShape.circle,
                         ),

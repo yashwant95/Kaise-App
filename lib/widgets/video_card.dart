@@ -55,28 +55,6 @@ class VideoCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (video['tag']?.isNotEmpty ?? false)
-                  Positioned(
-                    top: 10,
-                    left: 6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        video['tag']!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 8,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
                 Positioned(
                   bottom: 12,
                   left: 10,

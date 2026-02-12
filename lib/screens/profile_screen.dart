@@ -33,28 +33,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         centerTitle: true,
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await Future.delayed(const Duration(seconds: 1));
-          if (mounted) setState(() {});
-        },
-        color: Colors.amber,
-        backgroundColor: const Color(0xFF1E1E1E),
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(
-              parent: BouncingScrollPhysics()),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              _buildProfileHeader(),
-              const SizedBox(height: 32),
-              _buildAccountSection(),
-              const SizedBox(height: 24),
-              _buildSettingsSection(),
-              const SizedBox(height: 24),
-              _buildPreferencesSection(),
-            ],
-          ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            _buildProfileHeader(),
+            const SizedBox(height: 32),
+            _buildAccountSection(),
+            const SizedBox(height: 24),
+            _buildSettingsSection(),
+            const SizedBox(height: 24),
+            _buildPreferencesSection(),
+          ],
         ),
       ),
     );
@@ -403,4 +393,5 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+
 }

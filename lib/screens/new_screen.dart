@@ -13,7 +13,6 @@ class NewScreen extends StatefulWidget {
 }
 
 class _NewScreenState extends State<NewScreen> {
-  int _selectedFilterIndex = 0;
   List<Course> _courses = [];
   bool _isLoading = true;
 
@@ -38,14 +37,6 @@ class _NewScreenState extends State<NewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filterCategories = [
-      'All',
-      'Youtube',
-      'Instagram',
-      'Business',
-      'Editing'
-    ];
-
     if (_isLoading) {
       return const Center(
           child: CircularProgressIndicator(color: Colors.amber));
@@ -64,50 +55,6 @@ class _NewScreenState extends State<NewScreen> {
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
               ),
-            ),
-          ),
-          const SizedBox(height: 15),
-          SizedBox(
-            height: 40,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: filterCategories.length,
-              itemBuilder: (context, index) {
-                final isSelected = index == _selectedFilterIndex;
-                return Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      setState(() {
-                        _selectedFilterIndex = index;
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      margin: const EdgeInsets.only(right: 10),
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      decoration: BoxDecoration(
-                        color:
-                            isSelected ? Colors.white : const Color(0xFF1E1E1E),
-                        borderRadius: BorderRadius.circular(20),
-                        border:
-                            Border.all(color: Colors.white.withOpacity(0.05)),
-                      ),
-                      child: Center(
-                        child: Text(
-                          filterCategories[index],
-                          style: TextStyle(
-                            color: isSelected ? Colors.black : Colors.white70,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
             ),
           ),
           const SizedBox(height: 20),
@@ -169,15 +116,13 @@ class _NewScreenState extends State<NewScreen> {
             itemCount: courses.length,
             itemBuilder: (context, i) {
               final course = courses[i];
-              // Sanitize title for tag to avoid space/special char usage if needed, though Hero supports strings.
-              // We use heading + id for uniqueness.
               final sectionPrefix = title.replaceAll(' ', '');
               return Padding(
                 padding: const EdgeInsets.only(right: 15),
                 child: SizedBox(
                   width: 140,
                   child: VideoCard(
-                    video: {'title': course.title, 'tag': course.tag},
+                    video: {'title': course.title},
                     imageUrl: course.seriesThumbnail,
                     heroTag: 'new_${sectionPrefix}_${course.id}',
                     onTap: () {
