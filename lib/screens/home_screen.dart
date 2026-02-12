@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../widgets/custom_search_bar.dart';
-import '../widgets/category_item.dart';
 import '../widgets/video_card.dart';
 import '../models/course.dart';
-import '../models/category.dart';
 
 import 'video_details_screen.dart';
 import 'new_screen.dart';
@@ -26,10 +24,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-  String? _selectedCategory;
   String _searchQuery = '';
   List<Course> _courses = [];
-  List<Category> _categories = [];
   bool _isLoading = true;
 
   @override
@@ -41,10 +37,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _fetchData() async {
     try {
       final courses = await ApiService.fetchCourses();
-      final categories = await ApiService.fetchCategories();
       setState(() {
         _courses = courses;
-        _categories = categories;
         _isLoading = false;
       });
     } catch (e) {
@@ -74,12 +68,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ? const Center(
                     child: CircularProgressIndicator(color: Colors.amber))
                 : _HomeDashboard(
-                    selectedCategory: _selectedCategory,
                     searchQuery: _searchQuery,
                     courses: _courses,
-                    categories: _categories,
-                    onCategorySet: (cat) =>
-                        setState(() => _selectedCategory = cat),
                     onSearchSet: (query) =>
                         setState(() => _searchQuery = query),
                   ),
@@ -124,19 +114,13 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _HomeDashboard extends StatefulWidget {
-  final String? selectedCategory;
   final String searchQuery;
   final List<Course> courses;
-  final List<Category> categories;
-  final Function(String?)? onCategorySet;
   final Function(String)? onSearchSet;
 
   const _HomeDashboard({
     required this.courses,
-    required this.categories,
-    this.selectedCategory,
     this.searchQuery = '',
-    this.onCategorySet,
     this.onSearchSet,
   });
 
@@ -145,7 +129,6 @@ class _HomeDashboard extends StatefulWidget {
 }
 
 class _HomeDashboardState extends State<_HomeDashboard> {
-  static const String _englishSpeakingCategory = 'English Speaking';
   List<Course> _searchResults = [];
   bool _isSearching = false;
   bool _isSearchLoading = false;
@@ -191,20 +174,12 @@ class _HomeDashboardState extends State<_HomeDashboard> {
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
-    // Use search results if searching, otherwise use filtered courses
+    // Use search results if searching, otherwise use all courses
     List<Course> displayCourses;
     if (_isSearching && widget.searchQuery.isNotEmpty) {
       displayCourses = _searchResults;
     } else {
-      displayCourses = widget.courses.where((course) {
-        final matchesCategory = widget.selectedCategory == null ||
-            course.category == widget.selectedCategory;
-        final matchesSearch = widget.searchQuery.isEmpty ||
-            course.title
-                .toLowerCase()
-                .contains(widget.searchQuery.toLowerCase());
-        return matchesCategory && matchesSearch;
-      }).toList();
+      displayCourses = widget.courses;
     }
 
     return SingleChildScrollView(
@@ -250,21 +225,6 @@ class _HomeDashboardState extends State<_HomeDashboard> {
             ),
           const SizedBox(height: 16),
           _buildTopVideosGrid(context, displayCourses),
-          if (widget.searchQuery.isEmpty) ...[
-            const SizedBox(height: 30),
-            _buildSectionHeader(
-              title: localizations.englishSpeakingTitle,
-              titleColor: Colors.orange,
-              showViewAll: true,
-              leadingText: 'I Am',
-              viewAllLabel: localizations.viewAll,
-              onViewAll: () {
-                widget.onCategorySet?.call(_englishSpeakingCategory);
-              },
-            ),
-            const SizedBox(height: 16),
-            _buildHorizontalVideoList(context),
-          ],
           const SizedBox(height: 40),
         ],
       ),
@@ -409,78 +369,6 @@ class _HomeDashboardState extends State<_HomeDashboard> {
     );
   }
 
-  Widget _buildCategories(BuildContext context) {
-    // Helper to map string color names to Color objects
-    Color getColor(String colorName) {
-      switch (colorName.toLowerCase()) {
-        case 'orange':
-          return Colors.orange;
-        case 'red':
-          return Colors.red;
-        case 'pinkaccent':
-          return Colors.pinkAccent;
-        case 'blueaccent':
-          return Colors.blueAccent;
-        case 'greenaccent':
-          return Colors.greenAccent;
-        case 'lightblue':
-          return Colors.lightBlue;
-        case 'orangeaccent':
-          return Colors.orangeAccent;
-        case 'bluegrey':
-          return Colors.blueGrey;
-        default:
-          return Colors.blue;
-      }
-    }
-
-    // Helper to map string icon names to IconData
-    IconData getIcon(String iconName) {
-      switch (iconName) {
-        case 'language':
-          return Icons.language;
-        case 'play_circle_filled':
-          return Icons.play_circle_filled;
-        case 'camera_alt':
-          return Icons.camera_alt;
-        case 'business_center':
-          return Icons.business_center;
-        case 'monetization_on':
-          return Icons.monetization_on;
-        case 'phone_android':
-          return Icons.phone_android;
-        case 'account_balance':
-          return Icons.account_balance;
-        default:
-          return Icons.grid_view_rounded;
-      }
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final itemWidth = (constraints.maxWidth - 48) / 4;
-          return Wrap(
-            spacing: 16,
-            runSpacing: 24,
-            children: widget.categories.map((cat) {
-              return SizedBox(
-                width: itemWidth,
-                child: CategoryItem(
-                  icon: getIcon(cat.icon),
-                  label: cat.label,
-                  color: getColor(cat.color),
-                  onTap: () => widget.onCategorySet?.call(cat.label),
-                ),
-              );
-            }).toList(),
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildSectionHeader({
     IconData? icon,
     required String title,
@@ -578,7 +466,7 @@ class _HomeDashboardState extends State<_HomeDashboard> {
         itemBuilder: (context, index) {
           final course = courses[index];
           return VideoCard(
-            video: {'title': course.title, 'tag': course.tag},
+            video: {'title': course.title, 'tag': course.tag ?? ''},
             imageUrl: course.seriesThumbnail,
             heroTag: course.id,
             onTap: () {
@@ -590,65 +478,6 @@ class _HomeDashboardState extends State<_HomeDashboard> {
                         )),
               );
             },
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildHorizontalVideoList(BuildContext context) {
-    final englishCourses = widget.courses
-        .where((c) => c.category == _englishSpeakingCategory)
-        .toList();
-
-    return SizedBox(
-      height: 180,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: englishCourses.length,
-        itemBuilder: (context, index) {
-          final course = englishCourses[index];
-          return GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => VideoDetailsScreen(
-                          course: course,
-                        )),
-              );
-            },
-            child: Container(
-              width: 130,
-              margin: const EdgeInsets.only(right: 14),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Hero(
-                  tag: 'horizontal_${course.id}',
-                  child: Image.network(
-                    course.seriesThumbnail,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: Colors.grey[900],
-                      child: const Center(
-                          child: Icon(Icons.error, color: Colors.white54)),
-                    ),
-                  ),
-                ),
-              ),
-            ),
           );
         },
       ),

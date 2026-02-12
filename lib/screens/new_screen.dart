@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/video_card.dart';
 import 'video_details_screen.dart';
+import 'video_list_screen.dart';
 import '../services/api_service.dart';
 import '../models/course.dart';
 
@@ -69,7 +70,7 @@ class _NewScreenState extends State<NewScreen> {
                     parent: BouncingScrollPhysics()),
                 children: [
                   _buildNewArrivalSection(
-                      context, 'Trending this Week', _courses),
+                      context, 'Trending this Week', _courses.take(9).toList()),
                   _buildNewArrivalSection(context, 'Newly Added Series',
                       _courses.reversed.toList()),
                 ],
@@ -88,8 +89,15 @@ class _NewScreenState extends State<NewScreen> {
       children: [
         InkWell(
           onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('See all trending coming soon!')));
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => VideoListScreen(
+                  title: title,
+                  courses: courses as List<Course>,
+                ),
+              ),
+            );
           },
           borderRadius: BorderRadius.circular(8),
           child: Padding(

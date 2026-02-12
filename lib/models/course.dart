@@ -36,6 +36,7 @@ class Course {
   final int reviewsCount;
   final int viewCount;
   final bool isFree;
+  final String? tag;
 
   Course({
     required this.id,
@@ -46,6 +47,7 @@ class Course {
     required this.reviewsCount,
     this.viewCount = 0,
     this.isFree = true,
+    this.tag,
   });
 
   factory Course.fromJson(Map<String, dynamic> json) {
@@ -62,6 +64,7 @@ class Course {
       reviewsCount: json['reviewsCount'] ?? 0,
       viewCount: json['viewCount'] ?? 0,
       isFree: json['isFree'] ?? true,
+      tag: json['tag'] as String?,
     );
   }
 }
