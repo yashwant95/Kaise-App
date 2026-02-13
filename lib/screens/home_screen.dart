@@ -250,21 +250,6 @@ class _HomeDashboardState extends State<_HomeDashboard> {
             ),
           const SizedBox(height: 16),
           _buildTopVideosGrid(context, displayCourses),
-          if (widget.searchQuery.isEmpty) ...[
-            const SizedBox(height: 30),
-            _buildSectionHeader(
-              title: localizations.englishSpeakingTitle,
-              titleColor: Colors.orange,
-              showViewAll: true,
-              leadingText: 'I Am',
-              viewAllLabel: localizations.viewAll,
-              onViewAll: () {
-                widget.onCategorySet?.call(_englishSpeakingCategory);
-              },
-            ),
-            const SizedBox(height: 16),
-            _buildHorizontalVideoList(context),
-          ],
           const SizedBox(height: 40),
         ],
       ),
@@ -349,60 +334,70 @@ class _HomeDashboardState extends State<_HomeDashboard> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () => _showLanguagePicker(context),
-              borderRadius: BorderRadius.circular(24),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.purple.withOpacity(0.1),
-                      Colors.blue.withOpacity(0.1)
-                    ],
-                  ),
-                  border: Border.all(color: Colors.white.withOpacity(0.1)),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Row(
-                  children: [
-                    Text(
-                      localizations.languageChipLabel,
-                      style: const TextStyle(color: Colors.white, fontSize: 13),
-                    ),
-                    const SizedBox(width: 4),
-                    const Icon(Icons.keyboard_arrow_down,
-                        size: 18, color: Colors.white70),
-                  ],
-                ),
-              ),
-            ),
+          // App Logo
+          Image.asset(
+            'assets/images/app_logo.png',
+            height: 40,
+            width: 40,
           ),
-          const SizedBox(width: 16),
-          Material(
-            color: Colors.transparent,
-            shape: const CircleBorder(),
-            child: InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ProfileScreen(),
+          Row(
+            children: [
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _showLanguagePicker(context),
+                  borderRadius: BorderRadius.circular(24),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.purple.withOpacity(0.1),
+                          Colors.blue.withOpacity(0.1)
+                        ],
+                      ),
+                      border: Border.all(color: Colors.white.withOpacity(0.1)),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          localizations.languageChipLabel,
+                          style: const TextStyle(color: Colors.white, fontSize: 13),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.keyboard_arrow_down,
+                            size: 18, color: Colors.white70),
+                      ],
+                    ),
                   ),
-                );
-              },
-              borderRadius: BorderRadius.circular(20),
-              child: const CircleAvatar(
-                radius: 20,
-                backgroundColor: Color(0xFF2A2A2A),
-                child: Icon(Icons.person, color: Colors.white70, size: 24),
+                ),
               ),
-            ),
+              const SizedBox(width: 16),
+              Material(
+                color: Colors.transparent,
+                shape: const CircleBorder(),
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ProfileScreen(),
+                      ),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(20),
+                  child: const CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Color(0xFF2A2A2A),
+                    child: Icon(Icons.person, color: Colors.white70, size: 24),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
