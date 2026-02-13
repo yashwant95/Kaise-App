@@ -2,6 +2,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import '../models/course.dart';
+import '../models/category.dart';
 import '../utils/config.dart';
 
 class ApiService {
@@ -148,6 +149,26 @@ class ApiService {
       }
     } catch (e) {
       print('Error searching courses: $e');
+      rethrow;
+    }
+  }
+
+  // Fetch all categories
+  static Future<List<Category>> fetchCategories() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/categories'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map((json) => Category.fromJson(json)).toList();
+      } else {
+        throw Exception('Failed to load categories: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching categories: $e');
       rethrow;
     }
   }

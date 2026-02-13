@@ -36,6 +36,7 @@ class Course {
   final int reviewsCount;
   final int viewCount;
   final bool isFree;
+  final String? category;
   final String? tag;
 
   Course({
@@ -47,6 +48,7 @@ class Course {
     required this.reviewsCount,
     this.viewCount = 0,
     this.isFree = true,
+    this.category,
     this.tag,
   });
 
@@ -64,6 +66,7 @@ class Course {
       reviewsCount: json['reviewsCount'] ?? 0,
       viewCount: json['viewCount'] ?? 0,
       isFree: json['isFree'] ?? true,
+      category: json['category'] as String?,
       tag: json['tag'] as String?,
     );
   }
