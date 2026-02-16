@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../widgets/custom_search_bar.dart';
-import '../widgets/category_item.dart';
 import '../widgets/video_card.dart';
 import '../widgets/plus_badge.dart';
 import '../models/course.dart';
-import '../models/category.dart';
 
 import 'video_details_screen.dart';
 import 'new_screen.dart';
@@ -28,10 +26,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-  String? _selectedCategory;
   String _searchQuery = '';
   List<Course> _courses = [];
-  List<Category> _categories = [];
   bool _isLoading = true;
 
   @override
@@ -43,10 +39,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _fetchData() async {
     try {
       final courses = await ApiService.fetchCourses();
-      final categories = await ApiService.fetchCategories();
       setState(() {
         _courses = courses;
-        _categories = categories;
         _isLoading = false;
       });
     } catch (e) {
@@ -76,12 +70,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ? const Center(
                     child: CircularProgressIndicator(color: Colors.amber))
                 : _HomeDashboard(
-                    selectedCategory: _selectedCategory,
                     searchQuery: _searchQuery,
                     courses: _courses,
-                    categories: _categories,
-                    onCategorySet: (cat) =>
-                        setState(() => _selectedCategory = cat),
                     onSearchSet: (query) =>
                         setState(() => _searchQuery = query),
                   ),
@@ -126,19 +116,13 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _HomeDashboard extends StatefulWidget {
-  final String? selectedCategory;
   final String searchQuery;
   final List<Course> courses;
-  final List<Category> categories;
-  final Function(String?)? onCategorySet;
   final Function(String)? onSearchSet;
 
   const _HomeDashboard({
     required this.courses,
-    required this.categories,
-    this.selectedCategory,
     this.searchQuery = '',
-    this.onCategorySet,
     this.onSearchSet,
   });
 
