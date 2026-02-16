@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../widgets/custom_search_bar.dart';
+import '../widgets/category_item.dart';
 import '../widgets/video_card.dart';
-import '../widgets/plus_badge.dart';
 import '../models/course.dart';
+import '../models/category.dart';
 
 import 'video_details_screen.dart';
 import 'new_screen.dart';
 import 'library_screen.dart';
 import 'coach_screen.dart';
 import 'profile_screen.dart';
-import 'video_list_screen.dart';
 
 import '../services/api_service.dart';
 import '../l10n/app_localizations.dart';
@@ -26,8 +26,10 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  String? _selectedCategory;
   String _searchQuery = '';
   List<Course> _courses = [];
+  List<Category> _categories = [];
   bool _isLoading = true;
 
   @override
@@ -39,8 +41,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _fetchData() async {
     try {
       final courses = await ApiService.fetchCourses();
+      final categories = await ApiService.fetchCategories();
       setState(() {
         _courses = courses;
+        _categories = categories;
         _isLoading = false;
       });
     } catch (e) {
@@ -70,8 +74,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 ? const Center(
                     child: CircularProgressIndicator(color: Colors.amber))
                 : _HomeDashboard(
+                    selectedCategory: _selectedCategory,
                     searchQuery: _searchQuery,
                     courses: _courses,
+                    categories: _categories,
+                    onCategorySet: (cat) =>
+                        setState(() => _selectedCategory = cat),
                     onSearchSet: (query) =>
                         setState(() => _searchQuery = query),
                   ),
@@ -116,13 +124,19 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _HomeDashboard extends StatefulWidget {
+  final String? selectedCategory;
   final String searchQuery;
   final List<Course> courses;
+  final List<Category> categories;
+  final Function(String?)? onCategorySet;
   final Function(String)? onSearchSet;
 
   const _HomeDashboard({
     required this.courses,
+    required this.categories,
+    this.selectedCategory,
     this.searchQuery = '',
+    this.onCategorySet,
     this.onSearchSet,
   });
 
@@ -131,6 +145,7 @@ class _HomeDashboard extends StatefulWidget {
 }
 
 class _HomeDashboardState extends State<_HomeDashboard> {
+  static const String _englishSpeakingCategory = 'English Speaking';
   List<Course> _searchResults = [];
   bool _isSearching = false;
   bool _isSearchLoading = false;
@@ -176,7 +191,7 @@ class _HomeDashboardState extends State<_HomeDashboard> {
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
-
+    // Use search results if searching, otherwise use filtered courses
     List<Course> displayCourses;
     if (_isSearching && widget.searchQuery.isNotEmpty) {
       displayCourses = _searchResults;
@@ -191,10 +206,6 @@ class _HomeDashboardState extends State<_HomeDashboard> {
         return matchesCategory && matchesSearch;
       }).toList();
     }
-
-    final topCourses = widget.searchQuery.isNotEmpty
-        ? displayCourses
-        : displayCourses.take(6).toList();
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -211,11 +222,7 @@ class _HomeDashboardState extends State<_HomeDashboard> {
               },
             ),
           ),
-          if (widget.searchQuery.isEmpty) ...[
-            const SizedBox(height: 18),
-            _buildCategories(context),
-          ],
-          const SizedBox(height: 22),
+          const SizedBox(height: 20),
           if (widget.searchQuery.isNotEmpty)
             Padding(
               padding:
@@ -240,25 +247,23 @@ class _HomeDashboardState extends State<_HomeDashboard> {
                   ? localizations.noResults
                   : localizations.topVideos,
               iconColor: Colors.blueAccent,
-              showViewAll: widget.searchQuery.isEmpty,
-              viewAllLabel: localizations.viewAll,
-              onViewAll: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => VideoListScreen(
-                      title: localizations.topVideos,
-                      courses: displayCourses,
-                    ),
-                  ),
-                );
-              },
             ),
           const SizedBox(height: 16),
-          _buildTopVideosGrid(context, topCourses),
+          _buildTopVideosGrid(context, displayCourses),
           if (widget.searchQuery.isEmpty) ...[
             const SizedBox(height: 30),
-            _buildCategorySections(context, localizations),
+            _buildSectionHeader(
+              title: localizations.englishSpeakingTitle,
+              titleColor: Colors.orange,
+              showViewAll: true,
+              leadingText: 'I Am',
+              viewAllLabel: localizations.viewAll,
+              onViewAll: () {
+                widget.onCategorySet?.call(_englishSpeakingCategory);
+              },
+            ),
+            const SizedBox(height: 16),
+            _buildHorizontalVideoList(context),
           ],
           const SizedBox(height: 40),
         ],
@@ -332,8 +337,9 @@ class _HomeDashboardState extends State<_HomeDashboard> {
       ),
       onTap: () async {
         await context.read<LanguageProvider>().setLocale(locale);
-        if (!context.mounted) return;
-        Navigator.pop(context);
+        if (mounted) {
+          Navigator.pop(context);
+        }
       },
     );
   }
@@ -343,9 +349,8 @@ class _HomeDashboardState extends State<_HomeDashboard> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          const PlusBadge(),
           Material(
             color: Colors.transparent,
             child: InkWell(
@@ -355,8 +360,13 @@ class _HomeDashboardState extends State<_HomeDashboard> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.black,
-                  border: Border.all(color: const Color(0xFF9B2DFF), width: 1),
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.purple.withOpacity(0.1),
+                      Colors.blue.withOpacity(0.1)
+                    ],
+                  ),
+                  border: Border.all(color: Colors.white.withOpacity(0.1)),
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: Row(
@@ -399,104 +409,72 @@ class _HomeDashboardState extends State<_HomeDashboard> {
     );
   }
 
-  List<Category> _orderedCategories() {
-    final categories = List<Category>.from(widget.categories)
-      ..sort((a, b) => a.order.compareTo(b.order));
-    return categories;
-  }
-
-  Color _categoryColor(String colorName) {
-    switch (colorName.toLowerCase()) {
-      case 'orange':
-        return Colors.orange;
-      case 'red':
-        return Colors.red;
-      case 'pinkaccent':
-        return Colors.pinkAccent;
-      case 'blueaccent':
-        return Colors.blueAccent;
-      case 'greenaccent':
-        return Colors.greenAccent;
-      case 'lightblue':
-        return Colors.lightBlue;
-      case 'orangeaccent':
-        return Colors.orangeAccent;
-      case 'bluegrey':
-        return Colors.blueGrey;
-      default:
-        return Colors.blue;
-    }
-  }
-
-  dynamic _categoryIcon(String iconName, String label) {
-    switch (iconName) {
-      case 'language':
-        return 'Abc';
-      case 'play_circle_filled':
-        return Icons.play_circle_filled;
-      case 'camera_alt':
-        return Icons.camera_alt;
-      case 'business_center':
-        return Icons.business_center;
-      case 'monetization_on':
-        return Icons.monetization_on;
-      case 'phone_android':
-        return Icons.phone_android;
-      case 'account_balance':
-        return Icons.account_balance;
-      default:
-        if (label.toLowerCase().contains('english')) return 'Abc';
-        return Icons.grid_view_rounded;
-    }
-  }
-
   Widget _buildCategories(BuildContext context) {
-    final categories = _orderedCategories();
-    final displayCategories = categories.take(7).toList();
+    // Helper to map string color names to Color objects
+    Color getColor(String colorName) {
+      switch (colorName.toLowerCase()) {
+        case 'orange':
+          return Colors.orange;
+        case 'red':
+          return Colors.red;
+        case 'pinkaccent':
+          return Colors.pinkAccent;
+        case 'blueaccent':
+          return Colors.blueAccent;
+        case 'greenaccent':
+          return Colors.greenAccent;
+        case 'lightblue':
+          return Colors.lightBlue;
+        case 'orangeaccent':
+          return Colors.orangeAccent;
+        case 'bluegrey':
+          return Colors.blueGrey;
+        default:
+          return Colors.blue;
+      }
+    }
+
+    // Helper to map string icon names to IconData
+    IconData getIcon(String iconName) {
+      switch (iconName) {
+        case 'language':
+          return Icons.language;
+        case 'play_circle_filled':
+          return Icons.play_circle_filled;
+        case 'camera_alt':
+          return Icons.camera_alt;
+        case 'business_center':
+          return Icons.business_center;
+        case 'monetization_on':
+          return Icons.monetization_on;
+        case 'phone_android':
+          return Icons.phone_android;
+        case 'account_balance':
+          return Icons.account_balance;
+        default:
+          return Icons.grid_view_rounded;
+      }
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final itemWidth = (constraints.maxWidth - 48) / 4;
-          final categoryTiles = [
-            ...displayCategories.map((cat) {
-              final isSelected = widget.selectedCategory == cat.label;
-              return SizedBox(
-                width: itemWidth,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    border: isSelected
-                        ? Border.all(
-                            color: Colors.amber.withOpacity(0.65), width: 1)
-                        : null,
-                  ),
-                  child: CategoryItem(
-                    icon: _categoryIcon(cat.icon, cat.label),
-                    label: cat.label,
-                    color: _categoryColor(cat.color),
-                    onTap: () => widget.onCategorySet?.call(cat.label),
-                  ),
-                ),
-              );
-            }),
-            SizedBox(
-              width: itemWidth,
-              child: CategoryItem(
-                icon: Icons.grid_view_rounded,
-                label: 'View All',
-                color: Colors.grey.shade400,
-                onTap: () => widget.onCategorySet?.call(null),
-              ),
-            ),
-          ];
-
           return Wrap(
             spacing: 16,
             runSpacing: 24,
-            children: categoryTiles,
+            children: widget.categories.map((cat) {
+              return SizedBox(
+                width: itemWidth,
+                child: CategoryItem(
+                  icon: getIcon(cat.icon),
+                  label: cat.label,
+                  color: getColor(cat.color),
+                  onTap: () => widget.onCategorySet?.call(cat.label),
+                ),
+              );
+            }).toList(),
           );
         },
       ),
@@ -618,86 +596,33 @@ class _HomeDashboardState extends State<_HomeDashboard> {
     );
   }
 
-  Widget _buildCategorySections(
-      BuildContext context, AppLocalizations localizations) {
-    final categories = _orderedCategories().where((cat) {
-      final hasCourses =
-          widget.courses.any((course) => course.category == cat.label);
-      final matchesFilter = widget.selectedCategory == null ||
-          widget.selectedCategory == cat.label;
-      return hasCourses && matchesFilter;
-    }).toList();
+  Widget _buildHorizontalVideoList(BuildContext context) {
+    final englishCourses = widget.courses
+        .where((c) => c.category == _englishSpeakingCategory)
+        .toList();
 
-    if (categories.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      children: categories.map((category) {
-        final categoryCourses = widget.courses
-            .where((course) => course.category == category.label)
-            .toList();
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 30),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSectionHeader(
-                icon: _categoryIcon(category.icon, category.label) is IconData
-                    ? _categoryIcon(category.icon, category.label) as IconData
-                    : null,
-                leadingText:
-                    _categoryIcon(category.icon, category.label) is String
-                        ? _categoryIcon(category.icon, category.label) as String
-                        : null,
-                title: category.label,
-                titleColor: Colors.white,
-                iconColor: _categoryColor(category.color),
-                showViewAll: true,
-                viewAllLabel: localizations.viewAll,
-                onViewAll: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => VideoListScreen(
-                        title: category.label,
-                        courses: categoryCourses,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 14),
-              _buildHorizontalCategoryList(context, categoryCourses),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildHorizontalCategoryList(
-      BuildContext context, List<Course> courses) {
     return SizedBox(
-      height: 230,
+      height: 180,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: courses.length,
+        itemCount: englishCourses.length,
         itemBuilder: (context, index) {
-          final course = courses[index];
+          final course = englishCourses[index];
           return GestureDetector(
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => VideoDetailsScreen(course: course),
-                ),
+                    builder: (context) => VideoDetailsScreen(
+                          course: course,
+                        )),
               );
             },
             child: Container(
-              width: 155,
-              margin: const EdgeInsets.only(right: 12),
+              width: 130,
+              margin: const EdgeInsets.only(right: 14),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
@@ -710,51 +635,17 @@ class _HomeDashboardState extends State<_HomeDashboard> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Hero(
-                      tag: 'category_${course.id}',
-                      child: Image.network(
-                        course.seriesThumbnail,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          color: Colors.grey[900],
-                          child: const Center(
-                            child: Icon(Icons.error, color: Colors.white54),
-                          ),
-                        ),
-                      ),
+                child: Hero(
+                  tag: 'horizontal_${course.id}',
+                  child: Image.network(
+                    course.seriesThumbnail,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: Colors.grey[900],
+                      child: const Center(
+                          child: Icon(Icons.error, color: Colors.white54)),
                     ),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withOpacity(0.74),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      left: 10,
-                      right: 10,
-                      bottom: 10,
-                      child: Text(
-                        course.title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          height: 1.2,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),

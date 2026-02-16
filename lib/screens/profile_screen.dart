@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -44,6 +45,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _buildSettingsSection(),
             const SizedBox(height: 24),
             _buildPreferencesSection(),
+            const SizedBox(height: 28),
+            _buildDeveloperFooter(),
           ],
         ),
       ),
@@ -394,4 +397,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Future<void> _openDeveloperSite() async {
+    final uri = Uri.parse('https://newtab.in/');
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open website')),
+      );
+    }
+  }
+
+  Widget _buildDeveloperFooter() {
+    return Center(
+      child: InkWell(
+        onTap: _openDeveloperSite,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: Text(
+            'Developed by New Tab Software Solution',
+            style: GoogleFonts.outfit(
+              color: Colors.white70,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              decoration: TextDecoration.underline,
+              decorationColor: Colors.white54,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

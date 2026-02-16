@@ -5,7 +5,7 @@ class AppConfig {
   // For iOS Simulator: use localhost
   // For real device: use your computer's IP address or deployed backend URL
   static const String apiBaseUrl =
-      'https://q0c22gpw-5000.inc1.devtunnels.ms/api';
+      'https://kaise-app-backend.vercel.app/api';
 
   // App Name
   static const String appName = 'Kaise';

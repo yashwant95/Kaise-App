@@ -15,6 +15,7 @@ class NewScreen extends StatefulWidget {
 
 class _NewScreenState extends State<NewScreen> {
   List<Course> _courses = [];
+  List<Course> _trendingThisWeek = [];
   bool _isLoading = true;
 
   @override
@@ -26,8 +27,23 @@ class _NewScreenState extends State<NewScreen> {
   Future<void> _fetchCourses() async {
     try {
       final courses = await ApiService.fetchCourses();
+      final now = DateTime.now();
+      final weekAgo = now.subtract(const Duration(days: 7));
+      final weeklyCourses = courses
+          .where((course) =>
+              course.createdAt != null && course.createdAt!.isAfter(weekAgo))
+          .toList()
+        ..sort((a, b) => b.viewCount.compareTo(a.viewCount));
+
+      final trending = weeklyCourses.isNotEmpty
+          ? weeklyCourses.take(9).toList()
+          : ([...courses]..sort((a, b) => b.viewCount.compareTo(a.viewCount)))
+              .take(9)
+              .toList();
+
       setState(() {
         _courses = courses;
+        _trendingThisWeek = trending;
         _isLoading = false;
       });
     } catch (e) {
@@ -70,7 +86,7 @@ class _NewScreenState extends State<NewScreen> {
                     parent: BouncingScrollPhysics()),
                 children: [
                   _buildNewArrivalSection(
-                      context, 'Trending this Week', _courses.take(9).toList()),
+                      context, 'Trending this Week', _trendingThisWeek),
                   _buildNewArrivalSection(context, 'Newly Added Series',
                       _courses.reversed.toList()),
                 ],
@@ -83,7 +99,7 @@ class _NewScreenState extends State<NewScreen> {
   }
 
   Widget _buildNewArrivalSection(
-      BuildContext context, String title, List courses) {
+      BuildContext context, String title, List<Course> courses) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -94,7 +110,7 @@ class _NewScreenState extends State<NewScreen> {
               MaterialPageRoute(
                 builder: (context) => VideoListScreen(
                   title: title,
-                  courses: courses as List<Course>,
+                  courses: courses,
                 ),
               ),
             );
