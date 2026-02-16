@@ -95,7 +95,7 @@ Update the API base URL in `lib/utils/config.dart`:
 - For **iOS Simulator**: Use `http://localhost:5000/api`
 - For **Real Device**: Use your computer's IP address or deployed URL
 
-Current configuration uses DevTunnel URL: `https://kaise-app-backend.vercel.app/api`
+Current configuration uses DevTunnel URL: `https://q0c22gpw-5000.inc1.devtunnels.ms/api`
 
 ### 3. Run the Flutter App
 ```bash
@@ -107,7 +107,7 @@ flutter run
 ## Admin Panel Integration
 
 The Admin Panel is already integrated with the same backend:
-- Base URL: `https://kaise-app-backend.vercel.app/api`
+- Base URL: `https://q0c22gpw-5000.inc1.devtunnels.ms/api`
 - Built with React + Vite
 - Uses Axios for API calls
 

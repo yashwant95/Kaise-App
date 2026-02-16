@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../models/course.dart';
-import '../widgets/episode_tile.dart';
 import '../services/api_service.dart';
 
 class VideoDetailsScreen extends StatefulWidget {
@@ -585,7 +584,7 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen>
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'Episodes',
+          'Videos',
           style: GoogleFonts.outfit(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -598,7 +597,7 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen>
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
-            '${widget.course.episodes.length} episodes',
+            '${widget.course.episodes.length} videos',
             style: TextStyle(
               color: Colors.white.withOpacity(0.6),
               fontSize: 12,
